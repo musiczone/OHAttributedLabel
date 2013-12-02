@@ -2,7 +2,7 @@
  * This software is under the MIT License quoted below:
  ***********************************************************************************
  *
- * Copyright (c) 2012 Olivier Halligon
+ * Copyright (c) 2013 Matt Galloway
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,11 +25,48 @@
  ***********************************************************************************/
 
 
-#import <Foundation/Foundation.h>
+#import "OHTouchesGestureRecognizer.h"
 
-/////////////////////////////////////////////////////////////////////////////////////
-#pragma mark - NSTextCheckingResult Extension
+#import <UIKit/UIGestureRecognizerSubclass.h>
 
-@interface NSTextCheckingResult(ExtendedURL)
-@property(nonatomic, readonly) NSURL* extendedURL;
+@interface OHTouchesGestureRecognizer ()
+
+@property (nonatomic, assign) CGPoint startPoint;
+
+@end
+
+@implementation OHTouchesGestureRecognizer
+
+@synthesize startPoint = _startPoint;
+
+- (void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event {
+    self.startPoint = [(UITouch *)[touches anyObject] locationInView:self.view];
+    self.state = UIGestureRecognizerStateBegan;
+}
+
+- (void)touchesMoved:(NSSet *)touches withEvent:(UIEvent *)event {
+    UITouch *touch = (UITouch *)[touches anyObject];
+    CGPoint currentPoint = [touch locationInView:self.view];
+    CGFloat distanceX = (currentPoint.x - _startPoint.x);
+    CGFloat distanceY = (currentPoint.y - _startPoint.y);
+    CGFloat distance = sqrtf(distanceX * distanceX + distanceY * distanceY);
+    if (distance > 10.0f) {
+        self.state = UIGestureRecognizerStateCancelled;
+    } else {
+        self.state = UIGestureRecognizerStateChanged;
+    }
+}
+
+- (void)touchesEnded:(NSSet *)touches withEvent:(UIEvent *)event {
+    self.state = UIGestureRecognizerStateEnded;
+}
+
+- (void)touchesCancelled:(NSSet *)touches withEvent:(UIEvent *)event {
+    self.state = UIGestureRecognizerStateCancelled;
+}
+
+- (void)reset {
+    self.state = UIGestureRecognizerStatePossible;
+}
+
 @end

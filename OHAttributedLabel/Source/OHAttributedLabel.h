@@ -27,6 +27,7 @@
 
 #import <UIKit/UIKit.h>
 #import <CoreText/CoreText.h>
+#import "NSAttributedString+Attributes.h"
 #import "NSTextCheckingResult+ExtendedURL.h"
 
 
@@ -54,11 +55,16 @@ __attribute__((deprecated("You should use 'setTextAlignment:lineBreakMode:' on y
 __attribute__((unavailable("Since iOS6 SDK, you have to use 'setTextAlignment:lineBreakMode:' on your NSAttributedString instead.")));
 #endif
 
+#ifndef NS_OPTIONS
+// For older compilers compatibility. But you should really update your Xcode and LLVM.
+#define NS_OPTIONS(_type, _name) _type _name; enum _name
+#endif
+
 //! This flags are designed to be used with the linkUnderlineStyle property and the -attributedLabel:colorForLink:underlineStyle: delegate method
 //! - If you bitwise-OR the linkUnderlineStyle with the kOHBoldStyleTraitSetBold constant, the bold attribute will be added to links in text
 //! - If you bitwise-OR the linkUnderlineStyle with the kOHBoldStyleTraitUnSetBold constant, the bold attribute will be removed from links in text
 //! - If you don't use these constants, the bold attribute of links will not be altered (so it will be bold if link was already in a bold text portion, non-bold if not)
-typedef CF_OPTIONS(int32_t, OHBoldStyleTrait)  {
+typedef NS_OPTIONS(int32_t, OHBoldStyleTrait) {
     kOHBoldStyleTraitMask       = 0x030000,
     kOHBoldStyleTraitSetBold    = 0x030000,
     kOHBoldStyleTraitUnSetBold  = 0x020000,
@@ -88,17 +94,22 @@ typedef CF_OPTIONS(int32_t, OHBoldStyleTrait)  {
 //! Defaults to [UIColor colorWithWhite:0.2 alpha:0.5]
 @property(nonatomic, strong) UIColor* highlightedLinkColor UI_APPEARANCE_SELECTOR;
 //! Combination of CTUnderlineStyle and CTUnderlineStyleModifiers
-@property(nonatomic, assign) uint32_t linkUnderlineStyle UI_APPEARANCE_SELECTOR;
+@property(nonatomic, assign) int32_t linkUnderlineStyle UI_APPEARANCE_SELECTOR;
 //! Commodity setter to set the linkUnderlineStyle to CTUnderlineStyleSingle (YES) / CTUnderlineStyleNone (NO)
 -(void)setUnderlineLinks:(BOOL)underlineLinks;
 
 //! Add a link to some text in the label
--(void)addCustomLink:(NSURL*)linkUrl inRange:(NSRange)range;
+-(void)addCustomLink:(NSURL*)linkUrl inRange:(NSRange)range
+__attribute__((deprecated("You should add links directly to your NSAttributedString instead, using [setLink:... range:...] method (see NSAttributedString+Attributes.h)")));
 //! Remove all custom links from the label
--(void)removeAllCustomLinks;
+-(void)removeAllCustomLinks
+__attribute__((deprecated("You should remove links directly to from NSAttributedString instead, using [setLink:nil range:...] method (see NSAttributedString+Attributes.h)")));
+
 
 //! If YES, pointInside will only return YES if the touch is on a link. If NO, pointInside will always return YES (Defaults to YES)
 @property(nonatomic, assign) BOOL onlyCatchTouchesOnLinks;
+//! If YES, any touched links are process on touchBegin, otherwise on touchEnd (Defaults to NO)
+@property(nonatomic, assign) BOOL catchTouchesOnLinksOnTouchBegan;
 //! The delegate that gets informed when a link is touched and gives the opportunity to catch it
 @property(nonatomic, assign) IBOutlet id<OHAttributedLabelDelegate> delegate;
 

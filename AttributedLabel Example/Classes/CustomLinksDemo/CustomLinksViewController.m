@@ -8,6 +8,7 @@
 
 #import "CustomLinksViewController.h"
 #import <OHAttributedLabel/NSAttributedString+Attributes.h>
+#import <OHAttributedLabel/OHASBasicMarkupParser.h>
 #import "UIAlertView+Commodity.h"
 
 @interface CustomLinksViewController ()
@@ -61,20 +62,50 @@
 	/**(1)** Build the NSAttributedString *******/
 	NSMutableAttributedString* attrStr = [NSMutableAttributedString attributedStringWithString:txt];
 	// for those calls we don't specify a range so it affects the whole string
-	[attrStr setFont:[UIFont fontWithName:@"Helvetica" size:18]];
+	[attrStr setFont:[UIFont systemFontOfSize:18]];
 	[attrStr setTextColor:[UIColor grayColor]];
-    [attrStr setTextAlignment:kCTJustifiedTextAlignment lineBreakMode:kCTLineBreakByWordWrapping];
+    
+    // Set Paragraph Style: alignment, linebreak, indentation
+    OHParagraphStyle* paragraphStyle = [OHParagraphStyle defaultParagraphStyle];
+    paragraphStyle.textAlignment = kCTJustifiedTextAlignment;
+    paragraphStyle.lineBreakMode = kCTLineBreakByWordWrapping;
+    paragraphStyle.firstLineHeadIndent = 30.f; // indentation for first line
+    paragraphStyle.headIndent =  10.f; // indentation for lines other than the first (= left margin)
+    paragraphStyle.tailIndent = -10.f; // right margin (negative values to count from the right edge instead of left edge)
+    [attrStr setParagraphStyle:paragraphStyle];
     
 	// now we only change the color of "FoodReporter"
-	[attrStr setTextColor:[UIColor colorWithRed:0.f green:0.f blue:0.5 alpha:1.f] range:[txt rangeOfString:@TXT_BOLD]];
+	[attrStr setTextColor:[UIColor colorWithRed:0.f green:0.5f blue:0.0 alpha:1.f] range:[txt rangeOfString:@TXT_BOLD]];
 	[attrStr setTextBold:YES range:[txt rangeOfString:@TXT_BOLD]];
-	
+
+	// and add a link to the "share your food!" text
+    [attrStr setLink:[NSURL URLWithString:@"http://www.foodreporter.net"] range:[txt rangeOfString:@TXT_LINK]];
+    
 	/**(2)** Affect the NSAttributedString to the OHAttributedLabel *******/
 	self.customLinkDemoLabel.attributedText = attrStr;
-	// and add a link to the "share your food!" text
-	[self.customLinkDemoLabel addCustomLink:[NSURL URLWithString:@"http://www.foodreporter.net"] inRange:[txt rangeOfString:@TXT_LINK]];
+    self.customLinkDemoLabel.centerVertically = YES;
+}
+
+-(IBAction)toggleIndentation:(UISwitch*)indentationSwitch
+{
+ 	/**(3)** (... later ...) Modify again the existing string *******/
+	
+	// Get the current attributedString and make it a mutable copy so we can modify it
+	NSMutableAttributedString* mas = [self.customLinkDemoLabel.attributedText mutableCopy];
+	// Modify the indent of the whole paragraph
+	[mas modifyParagraphStylesWithBlock:^(OHParagraphStyle *paragraphStyle) {
+        paragraphStyle.firstLineHeadIndent = indentationSwitch.on ? 30.f : 0.f;
+        paragraphStyle.headIndent = indentationSwitch.on ?  10.f : 0.f;
+        paragraphStyle.tailIndent = indentationSwitch.on ? -10.f : 0.f;
+    }];
+	// Affect back the attributed string to the label
+	self.customLinkDemoLabel.attributedText = mas;
     
-	// "Hello World!" will be displayed in the label, justified, "Hello" in red and " World!" in gray.
+#if ! __has_feature(objc_arc)
+	// Cleaning: balance the "mutableCopy" call with a "release"
+	[mas release];
+#endif
+   
 }
 
 -(IBAction)toggleBold:(UISwitch*)boldSwitch
@@ -84,13 +115,10 @@
 	// Get the current attributedString and make it a mutable copy so we can modify it
 	NSMutableAttributedString* mas = [self.customLinkDemoLabel.attributedText mutableCopy];
 	NSString* plainText = [mas string];
-	// Modify the the font of "FoodReporter" to bold
+	// Modify the font of "FoodReporter" to bold variant
 	[mas setTextBold:boldSwitch.on range:[plainText rangeOfString:@TXT_BOLD]];
 	// Affect back the attributed string to the label
 	self.customLinkDemoLabel.attributedText = mas;
-	
-	// Restore the link (as each time we change the attributedText we remove custom links to avoid inconsistencies
-	[self.customLinkDemoLabel addCustomLink:[NSURL URLWithString:@"http://www.foodreporter.net"] inRange:[plainText rangeOfString:@TXT_LINK]];
     
 #if ! __has_feature(objc_arc)
 	// Cleaning: balance the "mutableCopy" call with a "release"
@@ -110,20 +138,41 @@
 -(void)configureMentionLabel
 {
     // Detect all "@xxx" mention-like strings using the "@\w+" regular expression
-    NSRegularExpression* userRegex = [NSRegularExpression regularExpressionWithPattern:@"@\\w+" options:0 error:nil];
+    NSRegularExpression* userRegex = [NSRegularExpression regularExpressionWithPattern:@"\\B@\\w+" options:0 error:nil];
+    NSMutableAttributedString* mas = [self.mentionDemoLabel.attributedText mutableCopy];
     [userRegex enumerateMatchesInString:self.mentionDemoLabel.text options:0 range:NSMakeRange(0,self.mentionDemoLabel.text.length)
                              usingBlock:^(NSTextCheckingResult *match, NSMatchingFlags flags, BOOL *stop)
     {
         // For each "@xxx" user mention found, add a custom link:
         NSString* user = [[self.mentionDemoLabel.text substringWithRange:match.range] substringFromIndex:1]; // get the matched user name, removing the "@"
         NSString* linkURLString = [NSString stringWithFormat:@"user:%@", user]; // build the "user:" link
-        [self.mentionDemoLabel addCustomLink:[NSURL URLWithString:linkURLString] inRange:match.range]; // add it
+        [mas setLink:[NSURL URLWithString:linkURLString] range:match.range]; // add it
     }];
-
-     self.mentionDemoLabel.centerVertically = YES;
+    
+    OHParagraphStyle* para = [OHParagraphStyle defaultParagraphStyle];
+    para.firstLineHeadIndent = 30;
+    para.headIndent = 5;
+    para.tailIndent = -5;
+    para.textAlignment = kCTTextAlignmentJustified;
+    [mas setParagraphStyle:para];
+    [OHASBasicMarkupParser processMarkupInAttributedString:mas];
+    
+    self.mentionDemoLabel.attributedText = mas;
+    self.mentionDemoLabel.centerVertically = YES;
 }
 
-
+-(IBAction)changeLineSpacing:(UISlider*)slider
+{
+    NSMutableAttributedString* mas = [self.mentionDemoLabel.attributedText mutableCopy];
+    [mas modifyParagraphStylesWithBlock:^(OHParagraphStyle *paragraphStyle) {
+        paragraphStyle.lineSpacing = slider.value;
+    }];
+    self.mentionDemoLabel.attributedText = mas;
+#if ! __has_feature(objc_arc)
+	// Cleaning: balance the "mutableCopy" call with a "release"
+	[mas release];
+#endif
+}
 
 /////////////////////////////////////////////////////////////////////////////
 #pragma mark - OHAttributedString Delegate Method
