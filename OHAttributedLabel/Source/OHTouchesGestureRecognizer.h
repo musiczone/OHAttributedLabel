@@ -2,7 +2,7 @@
  * This software is under the MIT License quoted below:
  ***********************************************************************************
  *
- * Copyright (c) 2012 Olivier Halligon
+ * Copyright (c) 2013 Matt Galloway
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,11 +25,8 @@
  ***********************************************************************************/
 
 
-#import <Foundation/Foundation.h>
+#import <UIKit/UIKit.h>
 
-/////////////////////////////////////////////////////////////////////////////////////
-#pragma mark - NSTextCheckingResult Extension
+@interface OHTouchesGestureRecognizer : UIGestureRecognizer
 
-@interface NSTextCheckingResult(ExtendedURL)
-@property(nonatomic, readonly) NSURL* extendedURL;
 @end
