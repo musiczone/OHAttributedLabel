@@ -110,15 +110,23 @@
 -(void)configureMentionLabel
 {
     // Detect all "@xxx" mention-like strings using the "@\w+" regular expression
-    NSRegularExpression* userRegex = [NSRegularExpression regularExpressionWithPattern:@"@\\w+" options:0 error:nil];
-    [userRegex enumerateMatchesInString:self.mentionDemoLabel.text options:0 range:NSMakeRange(0,self.mentionDemoLabel.text.length)
-                             usingBlock:^(NSTextCheckingResult *match, NSMatchingFlags flags, BOOL *stop)
-    {
-        // For each "@xxx" user mention found, add a custom link:
-        NSString* user = [[self.mentionDemoLabel.text substringWithRange:match.range] substringFromIndex:1]; // get the matched user name, removing the "@"
-        NSString* linkURLString = [NSString stringWithFormat:@"user:%@", user]; // build the "user:" link
-        [self.mentionDemoLabel addCustomLink:[NSURL URLWithString:linkURLString] inRange:match.range]; // add it
-    }];
+//    NSRegularExpression* userRegex = [NSRegularExpression regularExpressionWithPattern:@"@\\w+" options:0 error:nil];
+//    [userRegex enumerateMatchesInString:self.mentionDemoLabel.text options:0 range:NSMakeRange(0,self.mentionDemoLabel.text.length)
+//                             usingBlock:^(NSTextCheckingResult *match, NSMatchingFlags flags, BOOL *stop)
+//    {
+//        // For each "@xxx" user mention found, add a custom link:
+//        NSString* user = [[self.mentionDemoLabel.text substringWithRange:match.range] substringFromIndex:1]; // get the matched user name, removing the "@"
+//        NSString* linkURLString = [NSString stringWithFormat:@"user:%@", user]; // build the "user:" link
+//        [self.mentionDemoLabel addCustomLink:[NSURL URLWithString:linkURLString] inRange:match.range]; // add it
+//    }];
+
+    
+    NSRange range = [self.mentionDemoLabel.text rangeOfString:@"蝈蝈"]; // get the matched user name, removing the "@"
+    if (range.location != NSNotFound) {
+        NSString *user = [self.mentionDemoLabel.text substringWithRange:range];
+        NSString* linkURLString = [[NSString stringWithFormat:@"user:%@", user] stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]; // build the "user:" link
+        [self.mentionDemoLabel addCustomLink:[NSURL URLWithString:linkURLString] inRange:range];
+    }
 
      self.mentionDemoLabel.centerVertically = YES;
 }
@@ -137,7 +145,7 @@
 		// We use this arbitrary URL scheme to handle custom actions
 		// So URLs like "user:xxx" will be handled here instead of opening in Safari.
 		// Note: in the above example, "xxx" is the 'resourceSpecifier' part of the URL
-		NSString* user = [linkInfo.URL resourceSpecifier];
+		NSString* user = [[linkInfo.URL resourceSpecifier] stringByReplacingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
 
         // Display some message according to the user name clicked
         NSString* title = [NSString stringWithFormat:@"Tap on user %@", user];
